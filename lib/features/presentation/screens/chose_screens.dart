@@ -1,4 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+
+import 'package:intership_test_studyoio/features/presentation/screens/math_game.dart';
+
 import 'package:intership_test_studyoio/features/presentation/styles/text_style.dart';
 import 'package:intership_test_studyoio/features/presentation/widgets/button_custom.dart';
 import 'package:intership_test_studyoio/features/presentation/widgets/button_navigation.dart'; // Import DashboardScreen
@@ -13,7 +17,7 @@ class ChoseScreens extends StatelessWidget {
         title: Text(
           'Main Menu',
           style: PoppinsStyle.PoppinsStyleNormal.copyWith(
-                    fontSize: MediaQuery.of(context).size.width * 0.06),
+              fontSize: MediaQuery.of(context).size.width * 0.06),
         ),
       ),
       body: Center(
@@ -39,7 +43,7 @@ class ChoseScreens extends StatelessWidget {
               ),
             ),
             // Jarak antara dua tombol
-            const SizedBox(height: 20), // Jarak antara dua tombol
+            SizedBox(height: 20.h), // Jarak antara dua tombol
             Padding(
               padding: const EdgeInsets.symmetric(
                   horizontal: 50.0), // Jarak horizontal
@@ -48,7 +52,12 @@ class ChoseScreens extends StatelessWidget {
                 textStyle: SatoshiStyle.SatoshiStyleBold.copyWith(
                     fontSize: MediaQuery.of(context).size.width * 0.04),
                 onPressed: () {
-                  // Implementasi tindakan untuk tombol kedua jika diperlukan
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MathGamePage(),
+                    ),
+                  );
                 },
               ),
             ),
