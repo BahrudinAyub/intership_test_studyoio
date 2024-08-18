@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
-import 'package:intership_test_studyoio/features/presentation/screens/math_game.dart';
-
+import 'package:intership_test_studyoio/features/presentation/screens/math_game_screen.dart';
 import 'package:intership_test_studyoio/features/presentation/styles/text_style.dart';
 import 'package:intership_test_studyoio/features/presentation/widgets/button_custom.dart';
 import 'package:intership_test_studyoio/features/presentation/widgets/button_navigation.dart'; // Import DashboardScreen

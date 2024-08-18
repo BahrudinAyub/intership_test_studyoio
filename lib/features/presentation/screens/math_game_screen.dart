@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'dart:math';
-
+import 'package:intership_test_studyoio/features/data/math_game_logic.dart';
 import 'package:intership_test_studyoio/features/presentation/styles/color_style.dart';
+import 'package:intership_test_studyoio/features/presentation/widgets/line_painter.dart';
+
 
 class MathGamePage extends StatefulWidget {
   @override
@@ -10,95 +11,36 @@ class MathGamePage extends StatefulWidget {
 }
 
 class _MathGamePageState extends State<MathGamePage> {
-  int firstNumber = 0;
-  int secondNumber = 0;
-  int answer = 0;
-  int selectedNumber = -1;
-  int attempts = 2;
-  int wrongAttempts = 0;
-  bool isCorrect = false;
-  bool isAnswered = false;
-  bool isGameOver = false;
-
-  Offset? startPosition;
-  Offset? endPosition;
+  late MathGameLogic _gameLogic;
 
   final GlobalKey _answerKey = GlobalKey();
   final List<GlobalKey> _numberKeys = List.generate(10, (index) => GlobalKey());
+  bool isDragged = false; // Tambahkan flag isDragged
 
   @override
   void initState() {
     super.initState();
-    _generateNewProblem();
+    _gameLogic = MathGameLogic(onProblemGenerated: _updateUI);
+    _gameLogic.generateNewProblem();
   }
 
-  void _generateNewProblem() {
-    final random = Random();
-    firstNumber = random.nextInt(10);
-    secondNumber = random.nextInt(10);
-    answer = firstNumber + secondNumber;
-
-    if (answer >= 10) {
-      _generateNewProblem();
-      return;
-    }
-
-    isCorrect = false;
-    selectedNumber = -1;
-    wrongAttempts = 0;
-    attempts = 2;
-    isAnswered = false;
-    isGameOver = false;
-    startPosition = null;
-    endPosition = null;
-
-    setState(() {});
+  void _updateUI() {
+    setState(() {
+      isDragged = false; // Reset flag saat soal baru di-generate
+    });
   }
 
   void _updatePositions() {
-    RenderBox renderBoxAnswer =
-        _answerKey.currentContext?.findRenderObject() as RenderBox;
-    Offset answerPosition = renderBoxAnswer.localToGlobal(Offset.zero) +
-        Offset(
-            renderBoxAnswer.size.width / 10, renderBoxAnswer.size.height / 10);
-
-    setState(() {
-      endPosition = answerPosition;
-
-      if (selectedNumber >= 0) {
-        RenderBox renderBoxNumber = _numberKeys[selectedNumber]
-            .currentContext
-            ?.findRenderObject() as RenderBox;
-        Offset numberPosition = renderBoxNumber.localToGlobal(Offset.zero) +
-            Offset(renderBoxNumber.size.width / 10,
-                renderBoxNumber.size.height / 10);
-
-        startPosition = numberPosition;
-      }
-    });
+    _gameLogic.updatePositions(_answerKey, _numberKeys);
+    setState(() {});
   }
 
   void _checkAnswer() {
     _updatePositions();
-    if (isGameOver) return;
+    if (_gameLogic.isGameOver) return;
 
     setState(() {
-      isAnswered = true;
-      if (selectedNumber == answer) {
-        isCorrect = true;
-        _showCorrectAnswerDialog();
-      } else {
-        isCorrect = false;
-        wrongAttempts++;
-        attempts--;
-
-        if (wrongAttempts >= 2) {
-          isGameOver = true;
-          _showGameOverDialog();
-        } else {
-          _showIncorrectAnswerDialog();
-        }
-      }
+      _gameLogic.checkAnswer(_showCorrectAnswerDialog, _showIncorrectAnswerDialog, _showGameOverDialog);
     });
   }
 
@@ -114,7 +56,7 @@ class _MathGamePageState extends State<MathGamePage> {
               child: Text("OK"),
               onPressed: () {
                 Navigator.of(context).pop();
-                _generateNewProblem();
+                _gameLogic.generateNewProblem();
               },
             ),
           ],
@@ -173,15 +115,15 @@ class _MathGamePageState extends State<MathGamePage> {
         leading: IconButton(
           color: Colors.white,
           icon: const Icon(Icons.refresh),
-          onPressed: _generateNewProblem,
+          onPressed: _gameLogic.generateNewProblem,
         ),
         title: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(
             2,
             (index) => Icon(
-              index < wrongAttempts ? Icons.star_border : Icons.star,
-              color: index < wrongAttempts ? Colors.red : Colors.green,
+              index < _gameLogic.wrongAttempts ? Icons.star_border : Icons.star,
+              color: index < _gameLogic.wrongAttempts ? Colors.red : Colors.green,
             ),
           ),
         ),
@@ -193,7 +135,7 @@ class _MathGamePageState extends State<MathGamePage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  "$firstNumber + $secondNumber",
+                  "${_gameLogic.firstNumber} + ${_gameLogic.secondNumber}",
                   style: const TextStyle(fontSize: 40, color: Colors.blue),
                 ),
                 SizedBox(height: 20),
@@ -201,10 +143,11 @@ class _MathGamePageState extends State<MathGamePage> {
                   key: _answerKey,
                   onAccept: (data) {
                     setState(() {
-                      if (!isGameOver) selectedNumber = data;
-                      _updatePositions();
-                      startPosition = null;
-                      endPosition = null;
+                      if (!_gameLogic.isGameOver) {
+                        _gameLogic.selectedNumber = data;
+                        isDragged = true; // Set flag setelah angka di-drag
+                        _updatePositions();
+                      }
                     });
                   },
                   builder: (context, candidateData, rejectedData) {
@@ -212,18 +155,18 @@ class _MathGamePageState extends State<MathGamePage> {
                       padding: EdgeInsets.all(10),
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: isAnswered
-                              ? (isCorrect ? Colors.green : Colors.red)
+                          color: _gameLogic.isAnswered
+                              ? (_gameLogic.isCorrect ? Colors.green : Colors.red)
                               : Colors.grey,
                           width: 2,
                         ),
                       ),
                       child: Text(
-                        selectedNumber == -1 ? "?" : "$selectedNumber",
+                        _gameLogic.selectedNumber == -1 ? "?" : "${_gameLogic.selectedNumber}",
                         style: TextStyle(
                           fontSize: 40,
-                          color: isAnswered
-                              ? (isCorrect ? Colors.green : Colors.red)
+                          color: _gameLogic.isAnswered
+                              ? (_gameLogic.isCorrect ? Colors.green : Colors.red)
                               : Colors.white,
                         ),
                       ),
@@ -241,16 +184,16 @@ class _MathGamePageState extends State<MathGamePage> {
                         data: index,
                         onDragStarted: () {
                           setState(() {
-                            startPosition = null;
-                            endPosition = null;
+                            isDragged = false; // Reset flag saat drag dimulai
+                            _gameLogic.resetPositions();
                           });
                         },
                         onDragUpdate: (details) {
                           setState(() {
-                            if (startPosition == null) {
+                            if (_gameLogic.startPosition == null) {
                               _updatePositions();
                             }
-                            startPosition = details.globalPosition;
+                            _gameLogic.startPosition = details.globalPosition;
                           });
                         },
                         feedback: Material(
@@ -288,16 +231,16 @@ class _MathGamePageState extends State<MathGamePage> {
                         data: index + 5,
                         onDragStarted: () {
                           setState(() {
-                            startPosition = null;
-                            endPosition = null;
+                            isDragged = false; // Reset flag saat drag dimulai
+                            _gameLogic.resetPositions();
                           });
                         },
                         onDragUpdate: (details) {
                           setState(() {
-                            if (startPosition == null) {
+                            if (_gameLogic.startPosition == null) {
                               _updatePositions();
                             }
-                            startPosition = details.globalPosition;
+                            _gameLogic.startPosition = details.globalPosition;
                           });
                         },
                         feedback: Material(
@@ -326,9 +269,7 @@ class _MathGamePageState extends State<MathGamePage> {
                 ),
                 SizedBox(height: 30),
                 ElevatedButton(
-                  onPressed: () {
-                    _checkAnswer();
-                  },
+                  onPressed: _checkAnswer,
                   child: Icon(Icons.check, size: 30.sp, color: Colors.red),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: ColorStyle.buttonMathgame,
@@ -343,7 +284,7 @@ class _MathGamePageState extends State<MathGamePage> {
             ),
           ),
           CustomPaint(
-            painter: LinePainter(startPosition, endPosition),
+            painter: LinePainter(_gameLogic.startPosition, _gameLogic.endPosition, isDragged: isDragged),
           ),
         ],
       ),
@@ -351,53 +292,3 @@ class _MathGamePageState extends State<MathGamePage> {
   }
 }
 
-class LinePainter extends CustomPainter {
-  final Offset? startPosition;
-  final Offset? endPosition;
-
-  LinePainter(this.startPosition, this.endPosition);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (startPosition != null && endPosition != null) {
-      final paint = Paint()
-        ..color = Colors.cyan
-        ..strokeWidth = 4.0
-        ..strokeCap = StrokeCap.round;
-
-      // Draw line
-      canvas.drawLine(startPosition!, endPosition!, paint);
-
-      // Draw arrowhead
-      final arrowHeadPaint = Paint()
-        ..color = Colors.cyan
-        ..style = PaintingStyle.fill;
-
-      // Calculate the angle of the line
-      final dx = endPosition!.dx - startPosition!.dx;
-      final dy = endPosition!.dy - startPosition!.dy;
-      final angle = atan2(dy, dx);
-
-      final arrowSize = 20.0;
-
-      final arrowHeadPath = Path()
-        ..moveTo(endPosition!.dx, endPosition!.dy)
-        ..lineTo(
-          endPosition!.dx - arrowSize * cos(angle - pi / 6),
-          endPosition!.dy - arrowSize * sin(angle - pi / 6),
-        )
-        ..lineTo(
-          endPosition!.dx - arrowSize * cos(angle + pi / 6),
-          endPosition!.dy - arrowSize * sin(angle + pi / 6),
-        )
-        ..close();
-
-      canvas.drawPath(arrowHeadPath, arrowHeadPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true;
-  }
-}
